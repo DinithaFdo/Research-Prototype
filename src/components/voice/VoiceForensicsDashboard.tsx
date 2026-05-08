@@ -860,7 +860,7 @@ export function VoiceForensicsDashboard() {
       >
         <div>
           <div className="section-label" style={{ marginBottom: 6 }}>
-            Voice Forensics Module
+            Voice Detection Module
           </div>
           <h1
             style={{
@@ -880,34 +880,16 @@ export function VoiceForensicsDashboard() {
               marginTop: 6,
             }}
           >
-            Member 3 (Wijesundara) · Member 4 (Silva) — AASIST + WavLM + ESVAS
-            Explainability
+             AASIST + WavLM-Large + ESVAS — Explainable Voice Detection
           </p>
         </div>
-        <span
-          className="badge badge-emerald"
-          style={{
-            flexShrink: 0,
-            alignSelf: "flex-start",
-            marginTop: 4,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span
-            className="pulse-dot"
-            style={{ background: "#22C55E", color: "#22C55E" }}
-          />
-          Active Pipeline
-        </span>
       </motion.div>
 
       {/* 4-branch grid */}
       <div>
         <div className="section-label">
           <Radio size={11} color="var(--accent)" />
-          Multi-Branch Parallel Analysis — Wijesundara Architecture
+          Multi-Branch Parallel Analysis
         </div>
         <div
           style={{

@@ -900,6 +900,18 @@ function AuditPanel() {
 
 // ── Main Export ──────────────────────────────────────────────────────────────
 export function TextForensicsDashboard() {
+  const [inputText, setInputText] = useState(SAMPLE_TEXT);
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setInputText(text);
+    } catch {
+      /* clipboard permission denied — focus textarea for manual paste */
+      document.getElementById("text-input-area")?.focus();
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Page Header */}
@@ -914,9 +926,9 @@ export function TextForensicsDashboard() {
       >
         <div>
           {/* Section label */}
-          <div className="section-label" style={{ marginBottom: 6 }}>
-            Text Forensics Module
-          </div>
+           <div className="section-label" style={{ marginBottom: 6 }}>
+            Text Detection Module
+           </div>
           <h1
             style={{
               fontSize: 30,
@@ -936,63 +948,67 @@ export function TextForensicsDashboard() {
               marginTop: 6,
             }}
           >
-            Member 1 (Athapaththu) · Member 2 (Fernando) — DeBERTa-v3 +
-            LlamaIndex ReAct
+             DeBERTa-v3 + LlamaIndex ReAct — Explainable AI Detection
           </p>
         </div>
-        <span
-          className="badge badge-indigo"
-          style={{
-            flexShrink: 0,
-            alignSelf: "flex-start",
-            marginTop: 4,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span
-            className="pulse-dot"
-            style={{ background: "var(--accent)", color: "var(--accent)" }}
-          />
-          Active Pipeline
-        </span>
       </motion.div>
 
-      {/* Input Text Preview */}
+      {/* Quillbot-style Text Input Area */}
       <motion.div {...fadeUp(0.05)}>
-        <div className="card-accent" style={{ padding: "16px 20px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-            }}
-          >
-            <FileText size={12} color="var(--accent)" />
-            <span
-              style={{
-                fontSize: 10,
-                color: "var(--accent)",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                fontFamily: "var(--font-heading)",
-              }}
-            >
-              Input Text — Sample Document
-            </span>
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {/* Toolbar */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 16px", borderBottom: "1px solid var(--border)",
+            background: "var(--bg-surface)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FileText size={13} color="var(--accent)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
+                Input Text
+              </span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-body)" }}>
+                — paste or type content to analyze
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                {inputText.length} chars
+              </span>
+              <button
+                onClick={() => setInputText("")}
+                style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer", fontFamily: "var(--font-body)", transition: "all 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
+              >
+                Clear
+              </button>
+              <button
+                id="text-paste-btn"
+                onClick={handlePaste}
+                className="btn-primary"
+                style={{ fontSize: 12, padding: "6px 16px", borderRadius: 8 }}
+              >
+                Paste
+              </button>
+            </div>
           </div>
-          <p
+
+          {/* Textarea */}
+          <textarea
+            id="text-input-area"
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            placeholder="Paste or type your text here to detect if it is AI-generated..."
+            spellCheck={false}
             style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              lineHeight: 1.8,
+              width: "100%", minHeight: 140, padding: "16px",
+              fontSize: 13, color: "var(--text-primary)", lineHeight: 1.8,
+              background: "#fff", border: "none", outline: "none", resize: "vertical",
+              fontFamily: "var(--font-body)", boxSizing: "border-box",
+              display: "block",
             }}
-          >
-            {SAMPLE_TEXT}
-          </p>
+          />
         </div>
       </motion.div>
 
