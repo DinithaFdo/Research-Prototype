@@ -346,3 +346,50 @@ h1, h2, h3, h4, h5, h6 {
   from { stroke-dashoffset: 20; }
   to   { stroke-dashoffset: 0; }
 }
+
+/* ─── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .page-container {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  /* Footer: 2-column on tablet */
+  .footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* Stats: 2 columns */
+  .stats-grid {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+  /* Navbar center links hide label text on small screens */
+  .nav-link-label { display: none; }
+}
+
+@media (max-width: 600px) {
+  .page-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* Footer: 1-column stacked */
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Stats: 2 columns still fine on mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+  /* Pricing: always single column on small screens */
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Navbar: reduce padding on mobile */
+  .navbar-pill {
+    padding: 0 12px !important;
+  }
+}
+
+/* ─── Pricing card hover (supplement framer-motion) ─────────────── */
+.pricing-card-highlight {
+  background: linear-gradient(145deg, rgba(140,82,255,0.04) 0%, var(--bg-card) 100%);
+}
+

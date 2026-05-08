@@ -25,7 +25,7 @@ const STEPS_TEXT = [
   "Extracting token embeddings (768D)...",
   "Computing Attention Rollout matrices...",
   "Applying Integrated Gradients (IG)...",
-  "Generating NL forensic audit...",
+  "Generating NL detection audit...",
   "Computing AOPC faithfulness score...",
 ];
 const STEPS_VOICE = [
@@ -216,7 +216,7 @@ function DropZone({ onUpload }: { onUpload: (t: FileType) => void }) {
             <span style={{ color: "#22C55E", fontWeight: 600 }}>
               .wav / .mp3
             </span>{" "}
-            for voice forensics
+            for voice analysis
           </div>
         </div>
 
@@ -522,7 +522,7 @@ function ResultView({
             className="pulse-dot"
             style={{ background: "var(--error)", color: "var(--error)" }}
           />
-          Forensic Alert
+          Detection Alert
         </span>
       </div>
 
@@ -671,7 +671,7 @@ function ResultView({
           style={{ padding: 24, display: "flex", flexDirection: "column" }}
         >
           <div className="section-label">
-            <FileText size={11} color="var(--accent)" /> Forensic Report
+            <FileText size={11} color="var(--accent)" /> Detection Report
           </div>
 
           <div
@@ -699,7 +699,7 @@ function ResultView({
                   fontFamily: "var(--font-heading)",
                 }}
               >
-                AI Forensic Audit Summary
+                AI Detection Summary
               </div>
               <p
                 style={{
@@ -787,7 +787,7 @@ function ResultView({
                 </>
               ) : (
                 <>
-                  <Download size={14} /> Generate PDF Forensic Report
+                  <Download size={14} /> Generate PDF Report
                 </>
               )}
             </button>
@@ -858,7 +858,7 @@ export function InteractiveDemoPage() {
                 marginTop: 6,
               }}
             >
-              End-to-end forensic analysis pipeline — Upload → Process → Report
+              End-to-end detection pipeline — Upload → Process → Report
               → Export
             </p>
           </div>

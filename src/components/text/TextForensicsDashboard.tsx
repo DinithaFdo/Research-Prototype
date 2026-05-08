@@ -502,7 +502,7 @@ function TokenHeatmap() {
         iconBg="var(--accent-light)"
         title="Token Saliency Heatmap"
         subtitle="Attention Rollout × Integrated Gradients"
-        right={<span className="badge badge-violet">Fernando Method</span>}
+        right={<span className="badge badge-violet">Attention Analysis</span>}
       />
 
       <div
@@ -674,7 +674,7 @@ function AuditPanel() {
       <PanelHeader
         icon={<FileText size={16} color="var(--warning)" />}
         iconBg="#FFFBEB"
-        title="Forensic Audit Report"
+        title="Detection Audit Report"
         subtitle="Agentic SDK — Natural Language Explanation"
         right={<span className="badge badge-amber">Auto-Generated</span>}
       />

@@ -516,7 +516,7 @@ function WaveformPanel() {
             </div>
           </div>
         </div>
-        <span className="badge badge-emerald">Silva Method</span>
+        <span className="badge badge-emerald">Temporal Analysis</span>
       </div>
 
       {/* Waveform */}

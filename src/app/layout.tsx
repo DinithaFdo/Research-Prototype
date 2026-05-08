@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VeriSynth: Multi-Modal Forensic Lab",
-  description: "Academic-grade AI forensics platform for text and voice authenticity verification — powered by DeBERTa-v3, AASIST, WavLM, and explainable deep learning.",
-  keywords: ["AI detection", "forensic analysis", "text forensics", "voice forensics", "deepfake detection"],
+  title: "VeriGuard AI – AI Detection Platform",
+  description: "Enterprise-grade AI detection platform for text authenticity and synthetic voice analysis. Fast, explainable results powered by DeBERTa-v3, AASIST, WavLM, and deep learning.",
+  keywords: ["AI detection", "AI text detection", "deepfake voice detection", "synthetic voice analysis", "explainable AI"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
