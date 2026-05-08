@@ -4,7 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { HeroSection } from "@/components/layout/HeroSection";
 import { AuthModal } from "@/components/layout/AuthModal";
+import { ContactModal } from "@/components/layout/ContactModal";
+import { HelpCenterModal } from "@/components/layout/HelpCenterModal";
 import { PricingSection } from "@/components/layout/PricingSection";
+import { AboutSection } from "@/components/layout/AboutSection";
 import { Footer } from "@/components/layout/Footer";
 import { TextForensicsDashboard } from "@/components/text/TextForensicsDashboard";
 import { VoiceForensicsDashboard } from "@/components/voice/VoiceForensicsDashboard";
@@ -21,6 +24,8 @@ const PAGE = {
 export default function HomePage() {
   const [tab, setTab] = useState<Tab | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   /* ── Read initial tab from URL on mount ── */
   useEffect(() => {
@@ -56,10 +61,14 @@ export default function HomePage() {
         active={tab}
         onTab={navigate}
         onLoginClick={() => setAuthOpen(true)}
+        onContactClick={() => setContactOpen(true)}
+        onHelpClick={() => setHelpOpen(true)}
       />
 
-      {/* Auth modal */}
+      {/* Modals */}
       <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
+      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
+      <HelpCenterModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* Offset for fixed navbar */}
       <main style={{ flex: 1, paddingTop: 84 }}>
@@ -79,6 +88,9 @@ export default function HomePage() {
 
               {/* Pricing */}
               <PricingSection />
+
+              {/* About */}
+              <AboutSection />
 
               {/* Footer */}
               <Footer />

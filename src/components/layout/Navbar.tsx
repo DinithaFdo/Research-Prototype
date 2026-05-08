@@ -23,9 +23,11 @@ interface NavbarProps {
   active: Tab | null;
   onTab: (t: Tab | null) => void;
   onLoginClick: () => void;
+  onContactClick: () => void;
+  onHelpClick: () => void;
 }
 
-export function Navbar({ active, onTab, onLoginClick }: NavbarProps) {
+export function Navbar({ active, onTab, onLoginClick, onContactClick, onHelpClick }: NavbarProps) {
   const [dropOpen, setDropOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
 
@@ -171,7 +173,12 @@ export function Navbar({ active, onTab, onLoginClick }: NavbarProps) {
                 {DROPDOWN_ITEMS.map(({ id, label, Icon }) => (
                   <button
                     key={id} id={`dropdown-${id}`} role="menuitem"
-                    onClick={() => { setDropOpen(false); if (id === "login") onLoginClick(); }}
+                    onClick={() => {
+                      setDropOpen(false);
+                      if (id === "login") onLoginClick();
+                      if (id === "contact") onContactClick();
+                      if (id === "help") onHelpClick();
+                    }}
                     style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 10,
                       padding: "10px 12px", borderRadius: 10, fontSize: 13, fontWeight: 500,
