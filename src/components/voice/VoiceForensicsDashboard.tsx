@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart2,
@@ -11,6 +11,11 @@ import {
   Brain,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Square,
+  Play,
+  Trash2,
+  CheckCircle,
 } from "lucide-react";
 
 const BRANCHES = [
@@ -846,6 +851,264 @@ function SHAPPanel() {
 }
 
 // ── Main Export ──────────────────────────────────────────────────────────────
+/* ── Audio Input Panel ──────────────────────────────────────────────────────── */
+type AudioMode = "upload" | "record";
+type RecordState = "idle" | "recording" | "done";
+
+function AudioInputPanel() {
+  const [mode, setMode] = useState<AudioMode>("upload");
+  const [dragging, setDragging] = useState(false);
+  const [file, setFile] = useState<{ name: string; size: string; url: string } | null>(null);
+  const [recordState, setRecordState] = useState<RecordState>("idle");
+  const [recordSecs, setRecordSecs] = useState(0);
+  const [bars, setBars] = useState<number[]>(Array(36).fill(0.1));
+
+  const mediaRef   = useRef<MediaRecorder | null>(null);
+  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef     = useRef<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* Format seconds → mm:ss */
+  const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  /* Handle file selection */
+  const handleFile = useCallback((f: File) => {
+    if (!f.type.startsWith("audio/")) return;
+    const url = URL.createObjectURL(f);
+    const kb = f.size < 1_048_576
+      ? `${(f.size / 1024).toFixed(1)} KB`
+      : `${(f.size / 1_048_576).toFixed(2)} MB`;
+    setFile({ name: f.name, size: kb, url });
+  }, []);
+
+  /* Drag-and-drop */
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }, [handleFile]);
+
+  /* Start recording */
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new AudioContext();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      analyserRef.current = analyser;
+
+      const mr = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        setFile({ name: "recorded_audio.webm", size: `${(blob.size / 1024).toFixed(1)} KB`, url });
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start();
+      mediaRef.current = mr;
+      setRecordState("recording");
+      setRecordSecs(0);
+
+      timerRef.current = setInterval(() => setRecordSecs(s => s + 1), 1000);
+
+      /* Visualizer RAF */
+      const tick = () => {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        setBars(Array.from({ length: 36 }, (_, i) => (data[Math.floor(i * data.length / 36)] / 255) * 0.9 + 0.05));
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {
+      alert("Microphone permission denied. Please allow microphone access and try again.");
+    }
+  };
+
+  /* Stop recording */
+  const stopRecording = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    cancelAnimationFrame(rafRef.current);
+    mediaRef.current?.stop();
+    setRecordState("done");
+    setBars(Array(36).fill(0.1));
+  };
+
+  /* Cleanup on unmount */
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const clearAudio = () => {
+    setFile(null);
+    setRecordState("idle");
+    setRecordSecs(0);
+    setBars(Array(36).fill(0.1));
+  };
+
+  const TAB_STYLE = (active: boolean): React.CSSProperties => ({
+    padding: "8px 20px", borderRadius: 8, border: "none", cursor: "pointer",
+    fontSize: 13, fontWeight: active ? 600 : 500,
+    color: active ? "var(--accent)" : "var(--text-secondary)",
+    background: active ? "var(--accent-light)" : "transparent",
+    transition: "all 0.15s", fontFamily: "var(--font-body)",
+  });
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      {/* Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-page)", border: "1px solid var(--border)", borderRadius: 10, padding: 3 }}>
+          <button style={TAB_STYLE(mode === "upload")} onClick={() => { setMode("upload"); clearAudio(); }}>
+            <Upload size={12} style={{ display: "inline", marginRight: 6 }} />Upload File
+          </button>
+          <button style={TAB_STYLE(mode === "record")} onClick={() => { setMode("record"); clearAudio(); }}>
+            <Mic size={12} style={{ display: "inline", marginRight: 6 }} />Record Audio
+          </button>
+        </div>
+        {file && (
+          <button onClick={clearAudio} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "5px 12px", borderRadius: 8, background: "transparent", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer", fontFamily: "var(--font-body)" }}>
+            <Trash2 size={12} /> Remove
+          </button>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: 20 }}>
+        <AnimatePresence mode="wait">
+          {/* ── UPLOAD MODE ── */}
+          {mode === "upload" && !file && (
+            <motion.div key="upload-idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: `2px dashed ${dragging ? "var(--accent)" : "var(--border)"}`,
+                  borderRadius: 16, padding: "40px 24px", textAlign: "center",
+                  background: dragging ? "var(--accent-light)" : "var(--bg-surface)",
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
+              >
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--accent-light)", border: "1px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <Upload size={22} color="var(--accent)" />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6, fontFamily: "var(--font-heading)" }}>
+                  Drop your audio file here
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, fontFamily: "var(--font-body)" }}>
+                  or <span style={{ color: "var(--accent)", fontWeight: 600 }}>browse files</span> — supports{" "}
+                  <span style={{ color: "#22C55E", fontWeight: 600 }}>.wav</span> and{" "}
+                  <span style={{ color: "#22C55E", fontWeight: 600 }}>.mp3</span>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-body)" }}>
+                  Minimum 3 seconds · Maximum 30 MB
+                </div>
+                <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── FILE LOADED ── */}
+          {file && (
+            <motion.div key="file-loaded" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", background: "var(--bg-surface)", borderRadius: 14, border: "1px solid var(--border)", marginBottom: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F0FDF4", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>{file.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{file.size} · Ready for analysis</div>
+                </div>
+                <span className="badge badge-emerald" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span className="pulse-dot" style={{ background: "#22C55E", color: "#22C55E" }} />
+                  Loaded
+                </span>
+              </div>
+              {/* Playback */}
+              <audio controls src={file.url} style={{ width: "100%", borderRadius: 10, outline: "none", height: 40 }} />
+            </motion.div>
+          )}
+
+          {/* ── RECORD MODE — idle ── */}
+          {mode === "record" && recordState === "idle" && (
+            <motion.div key="record-idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div style={{ textAlign: "center", padding: "32px 0" }}>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--accent-light)", border: "2px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", cursor: "pointer" }}
+                  onClick={startRecording}>
+                  <Mic size={30} color="var(--accent)" />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6, fontFamily: "var(--font-heading)" }}>
+                  Click to start recording
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", fontFamily: "var(--font-body)" }}>
+                  Speak clearly into your microphone — minimum 3 seconds recommended
+                </div>
+                <button onClick={startRecording} className="btn-primary" style={{ marginTop: 20, padding: "10px 28px" }}>
+                  <Mic size={14} /> Start Recording
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── RECORD MODE — recording ── */}
+          {mode === "record" && recordState === "recording" && (
+            <motion.div key="record-active" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div style={{ textAlign: "center", padding: "28px 0" }}>
+                {/* Live waveform */}
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 3, height: 56, marginBottom: 20 }}>
+                  {bars.map((h, i) => (
+                    <motion.div key={i} animate={{ height: `${h * 100}%` }} transition={{ duration: 0.08 }}
+                      style={{ width: 5, borderRadius: 3, background: "var(--accent)", opacity: 0.7 + h * 0.3, minHeight: 4 }} />
+                  ))}
+                </div>
+                {/* Timer */}
+                <div className="mono" style={{ fontSize: 28, fontWeight: 900, color: "var(--error)", letterSpacing: "0.04em", marginBottom: 8 }}>
+                  {fmtTime(recordSecs)}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}>
+                  <span className="pulse-dot" style={{ background: "var(--error)", color: "var(--error)" }} />
+                  <span style={{ fontSize: 12, color: "var(--text-secondary)", fontFamily: "var(--font-body)" }}>Recording in progress...</span>
+                </div>
+                <button onClick={stopRecording} className="btn-primary" style={{ background: "var(--error)", borderColor: "var(--error)", padding: "10px 28px" }}>
+                  <Square size={14} fill="currentColor" /> Stop Recording
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── RECORD MODE — done (file set) ── */}
+          {mode === "record" && recordState === "done" && file && (
+            <motion.div key="record-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", background: "var(--bg-surface)", borderRadius: 14, border: "1px solid var(--border)", marginBottom: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F0FDF4", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <CheckCircle size={20} color="#22C55E" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>{file.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{file.size} · Recording complete</div>
+                </div>
+                <span className="badge badge-emerald" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <Play size={10} /> Recorded
+                </span>
+              </div>
+              <audio controls src={file.url} style={{ width: "100%", borderRadius: 10, height: 40 }} />
+              <button onClick={startRecording} className="btn-secondary" style={{ marginTop: 12, width: "100%", justifyContent: "center" }}>
+                <Mic size={13} /> Record Again
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 export function VoiceForensicsDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -885,6 +1148,11 @@ export function VoiceForensicsDashboard() {
         </div>
       </motion.div>
 
+      {/* Audio Input Panel */}
+      <motion.div {...fadeUp(0.05)}>
+        <AudioInputPanel />
+      </motion.div>
+
       {/* 4-branch grid */}
       <div>
         <div className="section-label">
@@ -921,3 +1189,4 @@ export function VoiceForensicsDashboard() {
     </div>
   );
 }
+
