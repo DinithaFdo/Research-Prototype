@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { HeroSection } from "@/components/layout/HeroSection";
@@ -22,12 +22,39 @@ export default function HomePage() {
   const [tab, setTab] = useState<Tab | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
 
+  /* ── Read initial tab from URL on mount ── */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab") as Tab | null;
+    if (t === "text" || t === "voice" || t === "demo") setTab(t);
+  }, []);
+
+  /* ── Sync URL when tab changes ── */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = tab ? `/?tab=${tab}` : "/";
+    window.history.pushState({ tab }, "", url);
+  }, [tab]);
+
+  /* ── Handle browser back/forward ── */
+  useEffect(() => {
+    const h = (e: PopStateEvent) => {
+      const t = (e.state as { tab?: Tab } | null)?.tab ?? null;
+      setTab(t);
+    };
+    window.addEventListener("popstate", h);
+    return () => window.removeEventListener("popstate", h);
+  }, []);
+
+  const navigate = (t: Tab | null) => setTab(t);
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
       {/* Always-visible floating navbar */}
       <Navbar
         active={tab}
-        onTab={(t) => setTab(t)}
+        onTab={navigate}
         onLoginClick={() => setAuthOpen(true)}
       />
 
@@ -39,13 +66,13 @@ export default function HomePage() {
         <AnimatePresence mode="wait">
           {!tab ? (
             <motion.div key="home" variants={PAGE} initial="initial" animate="animate" exit="exit">
-              {/* Hero */}
+              {/* Hero with embedded demo */}
               <div style={{ position: "relative" }}>
                 <div className="dot-grid" style={{ position: "absolute", inset: 0, opacity: 1, pointerEvents: "none", zIndex: 0 }} />
                 <div className="page-container" style={{ position: "relative", zIndex: 1 }}>
                   <HeroSection
-                    onTextStart={() => setTab("text")}
-                    onVoiceStart={() => setTab("voice")}
+                    onTextStart={() => navigate("text")}
+                    onVoiceStart={() => navigate("voice")}
                   />
                 </div>
               </div>
@@ -72,11 +99,7 @@ export default function HomePage() {
                   </span>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {["DeBERTa-v3","LlamaIndex ReAct","AASIST","WavLM-Large","ESVAS","SHAP","Attention Rollout"].map(t => (
-                      <span key={t} className="mono" style={{
-                        fontSize: 10, padding: "3px 9px", borderRadius: 6,
-                        background: "var(--accent-light)", border: "1px solid var(--border)",
-                        color: "var(--accent)", letterSpacing: "0.02em",
-                      }}>{t}</span>
+                      <span key={t} className="mono" style={{ fontSize: 10, padding: "3px 9px", borderRadius: 6, background: "var(--accent-light)", border: "1px solid var(--border)", color: "var(--accent)", letterSpacing: "0.02em" }}>{t}</span>
                     ))}
                   </div>
                 </div>

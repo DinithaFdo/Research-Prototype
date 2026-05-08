@@ -91,7 +91,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 .card:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 /* ─── Glass → replaced with clean card ──────────────────────────── */
@@ -107,7 +106,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 .glass-hover:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 /* ─── Accent left-border card variant ───────────────────────────── */
@@ -160,7 +158,6 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   box-shadow: var(--shadow-btn-hover);
-  transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) { transform: scale(0.97); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -192,7 +189,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: background 0.2s, color 0.2s, transform 0.15s;
   font-family: var(--font-body);
 }
-.btn-secondary:hover { background: var(--accent-light); transform: translateY(-1px); }
+.btn-secondary:hover { background: var(--accent-light); }
 .btn-secondary:active { transform: scale(0.97); }
 
 .btn-ghost {
