@@ -3,15 +3,20 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Globe, GitBranch, Building2, Mail, ArrowRight, Shield } from "lucide-react";
 
+import GoogleIcon from "@/assets/google-color-svgrepo-com.svg";
+import MicrosoftIcon from "@/assets/microsoft-svgrepo-com.svg";
+import GithubIcon from "@/assets/github-svgrepo-com.svg";
+import Image from "next/image";
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const SSO_BUTTONS = [
-  { id: "sso-google",    label: "Continue with Google",    Icon: Globe,       bg: "#fff",     border: "1.5px solid #E2E8F0", color: "#1A1A2E", hoverBg: "#F8FAFC" },
-  { id: "sso-microsoft", label: "Continue with Microsoft", Icon: Building2,   bg: "#fff",     border: "1.5px solid #E2E8F0", color: "#1A1A2E", hoverBg: "#F8FAFC" },
-  { id: "sso-github",    label: "Continue with GitHub",    Icon: GitBranch,   bg: "#1A1A2E",  border: "1.5px solid #1A1A2E", color: "#fff",    hoverBg: "#2D2D4A" },
+  { id: "sso-google",    label: "Continue with Google",    iconSrc: GoogleIcon,       bg: "#fff",     border: "1.5px solid #E2E8F0", color: "#1A1A2E", hoverBg: "#F8FAFC" },
+  { id: "sso-microsoft", label: "Continue with Microsoft", iconSrc: MicrosoftIcon,   bg: "#fff",     border: "1.5px solid #E2E8F0", color: "#1A1A2E", hoverBg: "#F8FAFC" },
+  { id: "sso-github",    label: "Continue with GitHub",    iconSrc: GithubIcon,   bg: "#1A1A2E",  border: "1.5px solid #1A1A2E", color: "#fff",    hoverBg: "#2D2D4A" },
 ];
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
@@ -80,9 +85,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 pointerEvents: "auto",
               }}
             >
-              {/* Accent top strip */}
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "var(--accent)" }} />
-
+              
               {/* Close button */}
               <button
                 id="auth-modal-close"
@@ -125,14 +128,14 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               {/* SSO buttons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                {SSO_BUTTONS.map(({ id, label, Icon, bg, border, color, hoverBg }) => (
+                {SSO_BUTTONS.map(({ id, label, iconSrc, bg, border, color, hoverBg }) => (
                   <button key={id} id={id}
                     onClick={() => {/* SSO PLACEHOLDER — wire real OAuth handler here */}}
                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "13px 20px", borderRadius: 12, background: bg, border, color, fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "background 0.15s", fontFamily: "var(--font-body)" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = hoverBg; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = bg; }}
                   >
-                    <Icon size={16} />{label}
+                    <Image src={iconSrc} alt={label} width={18} height={18} />{label}
                   </button>
                 ))}
               </div>
