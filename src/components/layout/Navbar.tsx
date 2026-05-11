@@ -1,21 +1,23 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, User, LogIn, HelpCircle, Mail, ChevronDown } from "lucide-react";
+import { Shield, User, LogIn, HelpCircle, Mail, ChevronDown, LayoutDashboard } from "lucide-react";
 
-type Tab = "text" | "voice" | "demo";
+type Tab = "text" | "voice" | "demo" | "dashboard";
 
 const NAV_LINKS = [
-  { id: "text" as Tab,  label: "Text Detection",  path: "/?tab=text" },
-  { id: "voice" as Tab, label: "Voice Detection",  path: "/?tab=voice" },
+  { id: "text"  as Tab, label: "Text Detection",  path: "/?tab=text"  },
+  { id: "voice" as Tab, label: "Voice Detection", path: "/?tab=voice" },
 ];
+
 const SECTION_LINKS = [
   { href: "#pricing", label: "Pricing" },
-  { href: "#about",   label: "About" },
+  { href: "#about",   label: "About"   },
 ];
+
 const DROPDOWN_ITEMS = [
-  { id: "login",   label: "Login / Sign Up", Icon: LogIn },
-  { id: "contact", label: "Contact Us",      Icon: Mail },
+  { id: "login",   label: "Login / Sign Up", Icon: LogIn      },
+  { id: "contact", label: "Contact Us",      Icon: Mail       },
   { id: "help",    label: "Help Center",     Icon: HelpCircle },
 ];
 
@@ -48,82 +50,66 @@ export function Navbar({ active, onTab, onLoginClick, onContactClick, onHelpClic
   return (
     <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, padding: "12px 20px", pointerEvents: "none" }}>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as any }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] as any }}
         style={{
           maxWidth: 1100, margin: "0 auto",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          height: 60, padding: "0 20px", borderRadius: 999,
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(140,82,255,0.15)",
-          boxShadow: "0 2px 20px rgba(0,0,0,0.06)",
+          height: 58, padding: "0 18px", borderRadius: 12,
+          background: "rgba(255,255,255,0.96)",
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid var(--border)",
           pointerEvents: "auto",
         }}
       >
-        {/* Logo — click navigates to home */}
+        {/* Logo */}
         <button
           id="nav-logo-btn"
           onClick={() => onTab(null)}
-          style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0, background: "none", border: "none", cursor: "pointer", padding: 0 }}
         >
-          {/* LOGO PLACEHOLDER — replace div below with:
-              <img src="/logo.png" alt="VeriGuard AI" style={{ height: 32 }} /> */}
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: "var(--accent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-          }}>
-            <Shield size={17} color="#fff" />
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Shield size={15} color="#fff" />
           </div>
           <div style={{ lineHeight: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "var(--accent)", letterSpacing: "-0.02em", fontFamily: "var(--font-heading)" }}>VeriGuard AI</div>
-            <div style={{ fontSize: 8.5, color: "var(--text-muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 2, fontFamily: "var(--font-body)" }}>AI Detection Platform</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "var(--text-primary)", letterSpacing: "-0.02em", fontFamily: "var(--font-heading)" }}>VeriGuard AI</div>
+            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 1.5, fontFamily: "var(--font-body)" }}>Detection Platform</div>
           </div>
         </button>
 
-        {/* Center nav — no icons, shows URL path context */}
+        {/* Center nav */}
         <nav style={{ display: "flex", alignItems: "center", gap: 2, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-          {NAV_LINKS.map(({ id, label, path }) => {
+          {NAV_LINKS.map(({ id, label }) => {
             const isActive = active === id;
             return (
               <button
                 key={id}
                 id={`nav-tab-${id}`}
                 onClick={() => onTab(id)}
-                title={path}
                 style={{
                   position: "relative", display: "flex", alignItems: "center",
-                  padding: "7px 16px", borderRadius: 999, fontSize: 13,
+                  padding: "6px 14px", borderRadius: 8, fontSize: 13,
                   fontWeight: isActive ? 600 : 500,
                   color: isActive ? "var(--accent)" : "var(--text-secondary)",
                   background: "transparent", border: "none", cursor: "pointer",
-                  transition: "color 0.2s", fontFamily: "var(--font-body)", whiteSpace: "nowrap",
+                  transition: "color 0.15s", fontFamily: "var(--font-body)", whiteSpace: "nowrap",
                 }}
                 onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
               >
                 {isActive && (
-                  <motion.div layoutId="nav-pill" style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--accent-light)", border: "1px solid var(--border-accent)" }} />
+                  <motion.div layoutId="nav-pill" style={{ position: "absolute", inset: 0, borderRadius: 8, background: "var(--accent-light)", border: "1px solid var(--border-accent)" }} />
                 )}
                 <span style={{ position: "relative", zIndex: 1 }}>{label}</span>
               </button>
             );
           })}
-          <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
+          <div style={{ width: 1, height: 14, background: "var(--border)", margin: "0 4px" }} />
           {SECTION_LINKS.map(({ href, label }) => (
             <a
-              key={href}
-              href={href}
-              id={`nav-link-${href.replace("#", "")}`}
-              style={{
-                display: "flex", alignItems: "center",
-                padding: "7px 16px", borderRadius: 999, fontSize: 13, fontWeight: 500,
-                color: "var(--text-secondary)", textDecoration: "none",
-                transition: "color 0.2s", fontFamily: "var(--font-body)", whiteSpace: "nowrap",
-              }}
+              key={href} href={href} id={`nav-link-${href.replace("#", "")}`}
+              style={{ display: "flex", alignItems: "center", padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.15s", fontFamily: "var(--font-body)", whiteSpace: "nowrap" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)"; }}
             >
@@ -132,69 +118,101 @@ export function Navbar({ active, onTab, onLoginClick, onContactClick, onHelpClic
           ))}
         </nav>
 
-        {/* User dropdown */}
-        <div ref={dropRef} style={{ position: "relative", flexShrink: 0 }}>
+        {/* Right side: Dashboard button + User dropdown */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          {/* Dashboard button */}
           <button
-            id="nav-user-btn" aria-label="User menu" aria-expanded={dropOpen} aria-haspopup="true"
-            onClick={() => setDropOpen(o => !o)}
+            id="nav-tab-dashboard"
+            onClick={() => onTab("dashboard")}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 14px 7px 10px", borderRadius: 999,
-              background: dropOpen ? "var(--accent-light)" : "var(--bg-surface)",
-              border: `1px solid ${dropOpen ? "var(--border-accent)" : "var(--border)"}`,
-              cursor: "pointer", transition: "all 0.2s", fontFamily: "var(--font-body)",
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "6px 13px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+              color: active === "dashboard" ? "var(--accent)" : "var(--text-secondary)",
+              background: active === "dashboard" ? "var(--accent-light)" : "transparent",
+              border: `1px solid ${active === "dashboard" ? "var(--border-accent)" : "var(--border)"}`,
+              cursor: "pointer", transition: "all 0.15s", fontFamily: "var(--font-body)", whiteSpace: "nowrap",
+            }}
+            onMouseEnter={e => {
+              if (active !== "dashboard") {
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-accent)";
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)";
+              }
+            }}
+            onMouseLeave={e => {
+              if (active !== "dashboard") {
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+              }
             }}
           >
-            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--accent-light)", border: "1.5px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <User size={13} color="var(--accent)" />
-            </div>
-            <ChevronDown size={11} color="var(--text-secondary)"
-              style={{ transform: dropOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-            />
+            <LayoutDashboard size={13} />
+            Dashboard
           </button>
 
-          <AnimatePresence>
-            {dropOpen && (
-              <motion.div
-                id="nav-user-dropdown" role="menu"
-                initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] as any }}
-                style={{
-                  position: "absolute", top: "calc(100% + 10px)", right: 0,
-                  minWidth: 200, background: "rgba(255,255,255,0.97)",
-                  backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-                  border: "1px solid var(--border)", borderRadius: 16,
-                  boxShadow: "0 12px 40px rgba(0,0,0,0.10)",
-                  overflow: "hidden", padding: 6,
-                }}
-              >
-                {DROPDOWN_ITEMS.map(({ id, label, Icon }) => (
-                  <button
-                    key={id} id={`dropdown-${id}`} role="menuitem"
-                    onClick={() => {
-                      setDropOpen(false);
-                      if (id === "login") onLoginClick();
-                      if (id === "contact") onContactClick();
-                      if (id === "help") onHelpClick();
-                    }}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", borderRadius: 10, fontSize: 13, fontWeight: 500,
-                      color: "var(--text-primary)", background: "transparent", border: "none",
-                      cursor: "pointer", transition: "background 0.15s,color 0.15s",
-                      fontFamily: "var(--font-body)", textAlign: "left",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-                  >
-                    <Icon size={14} color="var(--accent)" />{label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* User dropdown */}
+          <div ref={dropRef} style={{ position: "relative" }}>
+            <button
+              id="nav-user-btn" aria-label="User menu" aria-expanded={dropOpen} aria-haspopup="true"
+              onClick={() => setDropOpen(o => !o)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "6px 12px 6px 8px", borderRadius: 8,
+                background: dropOpen ? "var(--accent-light)" : "transparent",
+                border: `1px solid ${dropOpen ? "var(--border-accent)" : "var(--border)"}`,
+                cursor: "pointer", transition: "all 0.15s", fontFamily: "var(--font-body)",
+              }}
+            >
+              <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--accent-light)", border: "1px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <User size={12} color="var(--accent)" />
+              </div>
+              <ChevronDown size={10} color="var(--text-muted)"
+                style={{ transform: dropOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+              />
+            </button>
+
+            <AnimatePresence>
+              {dropOpen && (
+                <motion.div
+                  id="nav-user-dropdown" role="menu"
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] as any }}
+                  style={{
+                    position: "absolute", top: "calc(100% + 8px)", right: 0,
+                    minWidth: 190, background: "#fff",
+                    border: "1px solid var(--border)", borderRadius: 10,
+                    overflow: "hidden", padding: 5,
+                  }}
+                >
+                  {DROPDOWN_ITEMS.map(({ id, label, Icon }) => (
+                    <button
+                      key={id} id={`dropdown-${id}`} role="menuitem"
+                      onClick={() => {
+                        setDropOpen(false);
+                        if (id === "login")   onLoginClick();
+                        if (id === "contact") onContactClick();
+                        if (id === "help")    onHelpClick();
+                      }}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 9,
+                        padding: "9px 11px", borderRadius: 7, fontSize: 13, fontWeight: 500,
+                        color: "var(--text-primary)", background: "transparent", border: "none",
+                        cursor: "pointer", transition: "background 0.12s, color 0.12s",
+                        fontFamily: "var(--font-body)", textAlign: "left",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-light)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
+                    >
+                      <Icon size={13} color="var(--accent)" />{label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </motion.div>
     </header>

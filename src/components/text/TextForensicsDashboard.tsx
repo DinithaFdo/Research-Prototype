@@ -2,10 +2,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Cpu,
-  Zap,
-  Eye,
+  Loader2,
   FileText,
+  Play,
+  RotateCcw,
   AlertTriangle,
   TrendingUp,
   CheckCircle,
@@ -13,14 +13,66 @@ import {
 
 const SAMPLE_TEXT = `The algorithmic progression of artificial intelligence systems demonstrates a remarkable capacity for generating syntactically uniform prose. This systematic approach exhibits characteristic patterns of lexical distribution that deviate significantly from natural human writing styles. The uniformity of sentence structure and the consistent deployment of transitional phrases represent strong indicators of machine-generated content.`;
 
-const SANITIZATION_STEPS = [
-  { step: "Tokenizing input stream...", ms: 0 },
-  { step: "Scanning for zero-width spaces (U+200B)...", ms: 550 },
-  { step: "Detecting homoglyph substitutions (Cyr↔Lat)...", ms: 1100 },
-  { step: "Normalizing Unicode codepoints...", ms: 1650 },
-  { step: "Stripping invisible control characters...", ms: 2200 },
-  { step: "ReAct Agent: validating sanitized output...", ms: 2750 },
-  { step: "✓ Sanitization complete — 14 artifacts removed", ms: 3300 },
+const ANALYSIS_STEPS = [
+  {
+    label: "Reviewing content",
+    detail: "Checking for hidden characters and anomalies",
+  },
+  {
+    label: "Checking for manipulation",
+    detail: "Scanning for invisible characters",
+  },
+  {
+    label: "Detecting AI patterns",
+    detail: "Analyzing sentence structure and style",
+  },
+  {
+    label: "Measuring consistency",
+    detail: "Evaluating writing style uniformity",
+  },
+  {
+    label: "Running classification",
+    detail: "Scoring AI vs. human probability",
+  },
+  {
+    label: "Preparing explanation",
+    detail: "Generating readable insight report",
+  },
+  { label: "Finalizing result", detail: "Everything is ready" },
+];
+
+const BRANCH_CARDS = [
+  {
+    n: "01",
+    label: "Writing Pattern Check",
+    confidence: 94,
+    status: "AI Patterns Found",
+  },
+  {
+    n: "02",
+    label: "Sentence Structure Check",
+    confidence: 89,
+    status: "Uniform Structure",
+  },
+  {
+    n: "03",
+    label: "Word Choice Check",
+    confidence: 91,
+    status: "Formal Vocabulary",
+  },
+  {
+    n: "04",
+    label: "Readability Check",
+    confidence: 78,
+    status: "Low Variation",
+  },
+];
+
+const CONTRIBUTIONS = [
+  { label: "Writing Pattern", pct: 10 },
+  { label: "Sentence Structure", pct: 20 },
+  { label: "Word Choice", pct: 40 },
+  { label: "Readability", pct: 30 },
 ];
 
 const TOKEN_DATA = [
@@ -42,101 +94,551 @@ const TOKEN_DATA = [
   { word: "prose", score: 0.68 },
 ];
 
-const AUDIT_FINDINGS = [
+const WORD_SCORES: Record<string, number> = {
+  algorithmic: 0.92,
+  progression: 0.78,
+  artificial: 0.89,
+  intelligence: 0.95,
+  systems: 0.71,
+  demonstrates: 0.65,
+  remarkable: 0.58,
+  capacity: 0.74,
+  generating: 0.87,
+  syntactically: 0.96,
+  uniform: 0.91,
+  prose: 0.68,
+  systematic: 0.85,
+  approach: 0.62,
+  exhibits: 0.77,
+  characteristic: 0.88,
+  patterns: 0.83,
+  lexical: 0.94,
+  distribution: 0.72,
+  deviate: 0.69,
+  significantly: 0.75,
+  natural: 0.45,
+  human: 0.38,
+  writing: 0.52,
+  styles: 0.48,
+  uniformity: 0.93,
+  sentence: 0.86,
+  structure: 0.84,
+  consistent: 0.9,
+  deployment: 0.81,
+  transitional: 0.89,
+  phrases: 0.76,
+  represent: 0.67,
+  strong: 0.61,
+  indicators: 0.79,
+  machine: 0.94,
+  content: 0.55,
+  "machine-generated": 0.97,
+};
+
+function getWordScore(w: string): number {
+  return WORD_SCORES[w.toLowerCase().replace(/[^a-z-]/g, "")] ?? 0.1;
+}
+
+const FLAGGED_REASONS = [
   {
-    icon: AlertTriangle,
-    label: "High Syntactic Uniformity",
-    detail: "Sentence length variance σ=2.1 (human avg: σ=8.4)",
+    Icon: AlertTriangle,
+    label: "Unusually consistent sentence length",
+    detail:
+      "Human writers vary their sentence lengths naturally. This text has very low variation.",
     score: 94,
-    accent: "var(--error)",
   },
   {
-    icon: TrendingUp,
-    label: "Unnatural Lexical Distribution",
-    detail: "Zipf's Law deviation: 0.37 (threshold: 0.15)",
+    Icon: TrendingUp,
+    label: "Uncommon word frequency pattern",
+    detail: "The word distribution doesn't match how people naturally write.",
     score: 82,
-    accent: "var(--warning)",
   },
   {
-    icon: AlertTriangle,
-    label: "Zero-Width Space Homoglyphs",
-    detail: "14 invisible Unicode chars stripped by ReAct agent",
+    Icon: AlertTriangle,
+    label: "Hidden characters detected",
+    detail:
+      "14 invisible Unicode characters were found and removed before analysis.",
     score: 88,
-    accent: "var(--error)",
   },
   {
-    icon: AlertTriangle,
-    label: "Perplexity Collapse Detected",
-    detail: "GPT-2 perplexity: 23.4 (human baseline: 89.2)",
+    Icon: AlertTriangle,
+    label: "Low text complexity",
+    detail:
+      "The text is significantly simpler than typical human writing at this level.",
     score: 76,
-    accent: "var(--warning)",
   },
   {
-    icon: CheckCircle,
-    label: "No Emotional Arc Variance",
-    detail: "Sentiment remains flat across all paragraphs",
+    Icon: CheckCircle,
+    label: "No emotional variation",
+    detail:
+      "The tone stays flat throughout, which is rare in human-authored content.",
     score: 71,
-    accent: "var(--success)",
   },
 ];
 
-/** Map saliency score → violet intensity on white background */
 function scoreToStyle(score: number): React.CSSProperties {
-  const alpha = score * 0.9 + 0.08;
   return {
-    background: `rgba(140,82,255,${(alpha * 0.22).toFixed(2)})`,
+    background: `rgba(124,58,237,${(score * 0.18).toFixed(2)})`,
     color: score > 0.6 ? "var(--accent)" : "var(--text-secondary)",
-    border: `1px solid rgba(140,82,255,${(alpha * 0.35).toFixed(2)})`,
+    border: `1px solid rgba(124,58,237,${(score * 0.25).toFixed(2)})`,
   };
 }
 
 const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
+  initial: { opacity: 0, y: 14 },
   animate: {
     opacity: 1,
     y: 0,
-    transition: { delay, duration: 0.5, ease: [0.22, 1, 0.36, 1] as any },
+    transition: { delay, duration: 0.45, ease: [0.22, 1, 0.36, 1] as any },
   },
 });
 
-// ── Panel header helper ──────────────────────────────────────────────────────
-function PanelHeader({
-  icon,
-  iconBg,
-  title,
-  subtitle,
-  right,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  subtitle: string;
-  right?: React.ReactNode;
-}) {
+/* ── Loading Panel ──────────────────────────────────────────────────────── */
+function AnalysisLoadingPanel({ onDone }: { onDone: () => void }) {
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    const timers = ANALYSIS_STEPS.map((_, i) =>
+      setTimeout(() => {
+        setStepIdx(i);
+        if (i === ANALYSIS_STEPS.length - 1) setTimeout(onDone, 500);
+      }, i * 600),
+    );
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pct = Math.round(((stepIdx + 1) / ANALYSIS_STEPS.length) * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+    >
+      <div className="glass" style={{ padding: 28 }}>
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "var(--accent-light)",
+              border: "1px solid var(--border-accent)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 size={24} color="var(--accent)" />
+            </motion.div>
+          </div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              marginBottom: 4,
+            }}
+          >
+            Analyzing Text
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "var(--text-secondary)",
+              marginBottom: 18,
+            }}
+          >
+            {ANALYSIS_STEPS[stepIdx]?.detail}
+          </div>
+          <div className="progress-track" style={{ marginBottom: 6 }}>
+            <motion.div
+              className="progress-fill progress-indigo"
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.4 }}
+            />
+          </div>
+          <div
+            className="mono"
+            style={{ fontSize: 11, color: "var(--text-muted)" }}
+          >
+            {pct}% complete
+          </div>
+        </div>
+      </div>
+      <div className="glass" style={{ padding: 24 }}>
+        <div className="section-label">Progress</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {ANALYSIS_STEPS.map((s, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: i <= stepIdx ? 1 : 0.3 }}
+              style={{ display: "flex", alignItems: "center", gap: 10 }}
+            >
+              {i < stepIdx ? (
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: "var(--accent)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <CheckCircle size={10} color="#fff" />
+                </div>
+              ) : i === stepIdx ? (
+                <motion.div
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: "var(--accent-light)",
+                    border: "1.5px solid var(--accent)",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    border: "1.5px solid var(--border)",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: 13,
+                  color:
+                    i < stepIdx
+                      ? "var(--text-primary)"
+                      : i === stepIdx
+                        ? "var(--accent)"
+                        : "var(--text-muted)",
+                }}
+              >
+                {s.label}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Branch Cards Row ───────────────────────────────────────────────────── */
+function BranchCardsRow() {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 20,
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: 12,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {BRANCH_CARDS.map((b, i) => (
+        <motion.div
+          key={b.n}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05, duration: 0.4 }}
+          className="card"
+          style={{ padding: "18px 16px" }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "var(--accent)",
+              letterSpacing: "0.08em",
+              fontFamily: "var(--font-mono)",
+              marginBottom: 8,
+            }}
+          >
+            Branch {b.n}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-heading)",
+              marginBottom: 12,
+              lineHeight: 1.3,
+            }}
+          >
+            {b.label}
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <div className="progress-track" style={{ height: 5 }}>
+              <motion.div
+                className="progress-fill progress-indigo"
+                initial={{ width: 0 }}
+                animate={{ width: `${b.confidence}%` }}
+                transition={{
+                  delay: 0.1 + i * 0.06,
+                  duration: 0.8,
+                  ease: "easeOut",
+                }}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {b.status}
+            </span>
+            <span
+              className="mono"
+              style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}
+            >
+              {b.confidence}%
+            </span>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ── AI-Likely Text Preview ─────────────────────────────────────────────── */
+function AILikelyTextPreview({ text }: { text: string }) {
+  const parts = text.split(/(\s+)/);
+  return (
+    <div
+      style={{
+        lineHeight: 1.9,
+        fontSize: 13,
+        color: "var(--text-primary)",
+        fontFamily: "var(--font-body)",
+      }}
+    >
+      {parts.map((part, i) => {
+        if (/^\s+$/.test(part)) return <span key={i}>{part}</span>;
+        const score = getWordScore(part);
+        const alpha =
+          score > 0.5 ? Number(((score - 0.5) * 0.55).toFixed(2)) : 0;
+        return (
+          <span
+            key={i}
+            title={`AI signal: ${(score * 100).toFixed(0)}%`}
+            style={{
+              background:
+                alpha > 0 ? `rgba(124,58,237,${alpha})` : "transparent",
+              color: score > 0.75 ? "var(--accent)" : "var(--text-primary)",
+              borderRadius: 3,
+              padding: alpha > 0 ? "1px 2px" : undefined,
+            }}
+          >
+            {part}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Combined Result Section ────────────────────────────────────────────── */
+function CombinedResultSection({ text }: { text: string }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 16 }}>
+      {/* Left: branch contributions */}
+      <div className="glass" style={{ padding: 24 }}>
         <div
           style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: iconBg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
+            fontSize: 14,
+            fontWeight: 700,
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-heading)",
+            marginBottom: 4,
           }}
         >
-          {icon}
+          Combined Result
         </div>
+        <div
+          style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 20 }}
+        >
+          Branch contribution to final score
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 13,
+            marginBottom: 22,
+          }}
+        >
+          {CONTRIBUTIONS.map((c, i) => (
+            <div key={c.label}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 12,
+                  marginBottom: 5,
+                }}
+              >
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {c.label}
+                </span>
+                <span
+                  className="mono"
+                  style={{ fontWeight: 600, color: "var(--text-primary)" }}
+                >
+                  {c.pct}%
+                </span>
+              </div>
+              <div className="progress-track" style={{ height: 6 }}>
+                <motion.div
+                  className="progress-fill progress-indigo"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${c.pct}%` }}
+                  transition={{
+                    delay: 0.1 + i * 0.07,
+                    duration: 0.9,
+                    ease: "easeOut",
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+              }}
+            >
+              Final AI Probability
+            </span>
+            <span
+              className="mono"
+              style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)" }}
+            >
+              96.3%
+            </span>
+          </div>
+          <div
+            style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}
+          >
+            AI Generated — High Confidence
+          </div>
+        </div>
+      </div>
+
+      {/* Right: AI-Likely Text Preview */}
+      <div className="glass" style={{ padding: 24 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 4,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-heading)",
+            }}
+          >
+            AI-Likely Text Preview
+          </div>
+          <span className="badge badge-violet">Word-level view</span>
+        </div>
+        <div
+          style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 14 }}
+        >
+          Stronger purple = higher AI signal. Hover a word for its score.
+        </div>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            borderRadius: 8,
+            padding: "14px 16px",
+            border: "1px solid var(--border)",
+            maxHeight: 170,
+            overflowY: "auto",
+            marginBottom: 12,
+          }}
+        >
+          <AILikelyTextPreview text={text} />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 11,
+            color: "var(--text-muted)",
+          }}
+        >
+          <span>Low signal</span>
+          <div
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 999,
+              background:
+                "linear-gradient(to right, rgba(124,58,237,0.06), rgba(124,58,237,0.45), rgba(124,58,237,0.95))",
+            }}
+          />
+          <span>High signal</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Important Text Highlights ──────────────────────────────────────────── */
+function ImportantTextHighlights() {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  return (
+    <div className="glass" style={{ padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 18,
+        }}
+      >
         <div>
           <div
             style={{
@@ -146,396 +648,46 @@ function PanelHeader({
               fontFamily: "var(--font-heading)",
             }}
           >
-            {title}
+            Important Text Highlights
           </div>
           <div
             style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}
           >
-            {subtitle}
+            Words that most influenced the detection result
           </div>
         </div>
-      </div>
-      {right}
-    </div>
-  );
-}
-
-// ── Sanitization Panel ──────────────────────────────────────────────────────
-function SanitizationPanel() {
-  const [running, setRunning] = useState(false);
-  const [visibleSteps, setVisibleSteps] = useState<number[]>([]);
-  const [done, setDone] = useState(false);
-
-  const run = () => {
-    setVisibleSteps([]);
-    setDone(false);
-    setRunning(true);
-  };
-
-  useEffect(() => {
-    if (!running) return;
-    const timers = SANITIZATION_STEPS.map((s, i) =>
-      setTimeout(() => {
-        setVisibleSteps((prev) => [...prev, i]);
-        if (i === SANITIZATION_STEPS.length - 1) {
-          setDone(true);
-          setRunning(false);
-        }
-      }, s.ms),
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [running]);
-
-  return (
-    <div className="glass" style={{ padding: 24, height: "100%" }}>
-      <PanelHeader
-        icon={<Cpu size={16} color="var(--accent)" />}
-        iconBg="var(--accent-light)"
-        title="Agentic Sanitization"
-        subtitle="LlamaIndex ReAct Agent"
-        right={
-          <span className={`badge ${done ? "badge-emerald" : "badge-indigo"}`}>
-            {done ? "✓ Sanitized" : running ? "Processing..." : "Ready"}
-          </span>
-        }
-      />
-
-      {/* Terminal — clean card style */}
-      <div
-        style={{
-          background: "var(--bg-surface)",
-          borderRadius: 12,
-          padding: 16,
-          minHeight: 160,
-          marginBottom: 16,
-          position: "relative",
-          overflow: "hidden",
-          border: "1px solid var(--border)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 12,
-        }}
-      >
-        {running && <div className="scan-line" />}
-        {!running && !done && (
-          <div style={{ color: "var(--text-muted)", fontStyle: "italic" }}>
-            Click &quot;Run Agent&quot; to begin sanitization...
-          </div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {visibleSteps.map((i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 8,
-                color: SANITIZATION_STEPS[i].step.startsWith("✓")
-                  ? "var(--success)"
-                  : "var(--text-secondary)",
-              }}
-            >
-              <span style={{ color: "var(--accent)", flexShrink: 0 }}>›</span>
-              <span>{SANITIZATION_STEPS[i].step}</span>
-              {i === Math.max(...visibleSteps) && running && (
-                <span
-                  className="cursor-blink"
-                  style={{ color: "var(--accent)" }}
-                >
-                  _
-                </span>
-              )}
-            </motion.div>
-          ))}
-        </div>
+        <span className="badge badge-neutral">Word-level</span>
       </div>
 
-      {/* Stats after done */}
-      {done && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
-          {[
-            ["14", "Artifacts Removed"],
-            ["100%", "Unicode Normalized"],
-            ["0", "Residuals"],
-          ].map(([v, l]) => (
-            <div
-              key={l}
-              style={{
-                background: "var(--accent-light)",
-                borderRadius: 12,
-                padding: "12px 8px",
-                textAlign: "center",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <div
-                className="mono gradient-text-violet"
-                style={{ fontSize: 20, fontWeight: 800 }}
-              >
-                {v}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "var(--text-secondary)",
-                  marginTop: 4,
-                }}
-              >
-                {l}
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      <button
-        id="run-sanitization-btn"
-        className="btn-primary"
-        onClick={run}
-        disabled={running}
-        style={{ width: "100%", justifyContent: "center" }}
-      >
-        <Cpu size={14} />
-        {running ? "Running Agent..." : done ? "Re-run Agent" : "Run Agent"}
-      </button>
-    </div>
-  );
-}
-
-// ── Classification Panel ────────────────────────────────────────────────────
-function ClassificationPanel() {
-  const [revealed, setRevealed] = useState(false);
-
-  return (
-    <div className="glass" style={{ padding: 24, height: "100%" }}>
-      <PanelHeader
-        icon={<Zap size={16} color="var(--error)" />}
-        iconBg="#FEF2F2"
-        title="Classification Engine"
-        subtitle="DeBERTa-v3-large"
-        right={
-          <button
-            id="reveal-classification-btn"
-            className="btn-ghost"
-            onClick={() => setRevealed(true)}
-          >
-            {revealed ? "Re-classify" : "Classify ›"}
-          </button>
-        }
-      />
-
-      {!revealed ? (
-        <div
-          style={{
-            height: 160,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-muted)",
-            fontSize: 13,
-            background: "var(--bg-surface)",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-          }}
-        >
-          Run classification to see DeBERTa-v3 results
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
-        >
-          {/* Verdict banner */}
-          <div
-            style={{
-              background: "#FEF2F2",
-              border: "1px solid rgba(239,68,68,0.25)",
-              borderRadius: 12,
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <AlertTriangle
-              size={18}
-              color="var(--error)"
-              style={{ flexShrink: 0 }}
-            />
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#DC2626",
-                  fontFamily: "var(--font-heading)",
-                }}
-              >
-                AI Generated — High Confidence
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-muted)",
-                  marginTop: 2,
-                }}
-              >
-                DeBERTa-v3 | Attention Rollout × IG
-              </div>
-            </div>
-            <div
-              className="mono"
-              style={{
-                fontSize: 26,
-                fontWeight: 900,
-                color: "var(--error)",
-                flexShrink: 0,
-              }}
-            >
-              96.3%
-            </div>
-          </div>
-
-          {/* Probability bars */}
-          {[
-            { label: "AI Generated", pct: 96.3, cls: "progress-rose" },
-            { label: "Human Written", pct: 3.7, cls: "progress-teal" },
-          ].map((b) => (
-            <div key={b.label}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 12,
-                  marginBottom: 6,
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <span>{b.label}</span>
-                <span
-                  className="mono"
-                  style={{ color: "var(--text-primary)", fontWeight: 600 }}
-                >
-                  {b.pct}%
-                </span>
-              </div>
-              <div className="progress-track">
-                <motion.div
-                  className={`progress-fill ${b.cls}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${b.pct}%` }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                />
-              </div>
-            </div>
-          ))}
-
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-            <div className="section-label">Model Internals</div>
-            {[
-              {
-                label: "DeBERTa-v3 Confidence",
-                pct: 94.1,
-                cls: "progress-indigo",
-              },
-              {
-                label: "Ensemble Agreement",
-                pct: 97.8,
-                cls: "progress-violet",
-              },
-              { label: "Cross-lingual Check", pct: 91.5, cls: "progress-teal" },
-            ].map((b) => (
-              <div key={b.label} style={{ marginBottom: 10 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 11,
-                    marginBottom: 4,
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <span>{b.label}</span>
-                  <span
-                    className="mono"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {b.pct}%
-                  </span>
-                </div>
-                <div className="progress-track" style={{ height: 4 }}>
-                  <motion.div
-                    className={`progress-fill ${b.cls}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${b.pct}%` }}
-                    transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-// ── Token Heatmap ───────────────────────────────────────────────────────────
-function TokenHeatmap() {
-  const [hovered, setHovered] = useState<number | null>(null);
-
-  return (
-    <div className="glass" style={{ padding: 24 }}>
-      <PanelHeader
-        icon={<Eye size={16} color="var(--accent)" />}
-        iconBg="var(--accent-light)"
-        title="Token Saliency Heatmap"
-        subtitle="Attention Rollout × Integrated Gradients"
-        right={<span className="badge badge-violet">Attention Analysis</span>}
-      />
-
       <div
-        style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 14 }}
+        style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 12 }}
       >
-        Hover any token to see saliency breakdown
+        Darker highlight = stronger AI signal
       </div>
 
-      {/* Token pills */}
       <div
-        style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}
+        style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 18 }}
       >
         {TOKEN_DATA.map((t, i) => {
           const style = scoreToStyle(t.score);
-          const isHovered = hovered === i;
+          const isHov = hovered === i;
           return (
             <motion.span
               key={i}
-              id={`token-${i}`}
               onHoverStart={() => setHovered(i)}
               onHoverEnd={() => setHovered(null)}
-              whileHover={{ scale: 1.08, y: -2 }}
+              whileHover={{ scale: 1.06, y: -1 }}
               className="mono"
               style={{
-                padding: "6px 12px",
-                borderRadius: 8,
+                padding: "5px 11px",
+                borderRadius: 7,
                 fontSize: 13,
                 fontWeight: 500,
                 cursor: "pointer",
-                background: isHovered ? "var(--accent)" : style.background,
-                color: isHovered ? "#fff" : style.color,
-                border: isHovered ? "1px solid var(--accent)" : style.border,
-                transition: "background 0.15s, color 0.15s",
+                background: isHov ? "var(--accent)" : style.background,
+                color: isHov ? "#fff" : style.color,
+                border: isHov ? "1px solid var(--accent)" : style.border,
+                transition: "background 0.12s, color 0.12s",
               }}
             >
               {t.word}
@@ -544,7 +696,6 @@ function TokenHeatmap() {
         })}
       </div>
 
-      {/* Hover tooltip */}
       <AnimatePresence>
         {hovered !== null && (
           <motion.div
@@ -554,10 +705,9 @@ function TokenHeatmap() {
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 16,
-              marginBottom: 16,
-              boxShadow: "var(--shadow-card-hover)",
+              borderRadius: 10,
+              padding: 14,
+              marginBottom: 14,
             }}
           >
             <div
@@ -565,16 +715,16 @@ function TokenHeatmap() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 12,
+                marginBottom: 10,
               }}
             >
               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                Token Analysis
+                Word detail
               </span>
               <span
                 className="mono"
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: "var(--accent)",
                 }}
@@ -586,20 +736,20 @@ function TokenHeatmap() {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
-                gap: 8,
+                gap: 7,
               }}
             >
               {[
                 [
-                  "Saliency Score",
+                  "AI Signal",
                   `${(TOKEN_DATA[hovered].score * 100).toFixed(1)}%`,
                 ],
                 [
-                  "Attention Rollout",
+                  "Attention Weight",
                   `${(TOKEN_DATA[hovered].score * 87).toFixed(1)}%`,
                 ],
                 [
-                  "Integrated Grad",
+                  "Gradient Score",
                   `${(TOKEN_DATA[hovered].score * 94).toFixed(1)}%`,
                 ],
               ].map(([k, v]) => (
@@ -608,18 +758,18 @@ function TokenHeatmap() {
                   style={{
                     textAlign: "center",
                     background: "var(--accent-light)",
-                    borderRadius: 8,
-                    padding: "10px 8px",
-                    border: "1px solid var(--border)",
+                    borderRadius: 7,
+                    padding: "9px 7px",
+                    border: "1px solid var(--border-accent)",
                   }}
                 >
                   <div
                     style={{
                       fontSize: 9,
                       color: "var(--text-muted)",
-                      marginBottom: 4,
+                      marginBottom: 3,
                       textTransform: "uppercase",
-                      letterSpacing: "0.06em",
+                      letterSpacing: "0.05em",
                     }}
                   >
                     {k}
@@ -627,7 +777,7 @@ function TokenHeatmap() {
                   <div
                     className="mono"
                     style={{
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: 700,
                       color: "var(--accent)",
                     }}
@@ -641,83 +791,114 @@ function TokenHeatmap() {
         )}
       </AnimatePresence>
 
-      {/* Saliency legend */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: 8,
           fontSize: 11,
           color: "var(--text-muted)",
         }}
       >
-        <span>Low</span>
+        <span>Low signal</span>
         <div
           style={{
             flex: 1,
-            height: 6,
+            height: 5,
             borderRadius: 999,
             background:
-              "linear-gradient(to right, rgba(140,82,255,0.1), rgba(140,82,255,0.5), rgba(140,82,255,1))",
+              "linear-gradient(to right, rgba(124,58,237,0.08), rgba(124,58,237,0.5), rgba(124,58,237,1))",
           }}
         />
-        <span>High Saliency</span>
+        <span>High signal</span>
       </div>
     </div>
   );
 }
 
-// ── Audit Panel ─────────────────────────────────────────────────────────────
-function AuditPanel() {
+/* ── Why This Text Was Marked as AI ────────────────────────────────────── */
+function WhyMarkedAsAI() {
   return (
     <div className="glass" style={{ padding: 24 }}>
-      <PanelHeader
-        icon={<FileText size={16} color="var(--warning)" />}
-        iconBg="#FFFBEB"
-        title="Detection Audit Report"
-        subtitle="Agentic SDK — Natural Language Explanation"
-        right={<span className="badge badge-amber">Auto-Generated</span>}
-      />
-
-      {/* Findings */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          marginBottom: 24,
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 18,
         }}
       >
-        {AUDIT_FINDINGS.map((f, i) => (
+        <div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-heading)",
+            }}
+          >
+            Why This Text Was Marked as AI
+          </div>
+          <div
+            style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}
+          >
+            Plain-language explanation of what was detected
+          </div>
+        </div>
+        <span className="badge badge-neutral">Auto-generated</span>
+      </div>
+
+      {/* Plain-language explanation */}
+      <div
+        style={{
+          background: "var(--accent-light)",
+          border: "1px solid var(--border-accent)",
+          borderRadius: 10,
+          padding: "14px 18px",
+          marginBottom: 18,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 13,
+            color: "var(--text-primary)",
+            lineHeight: 1.8,
+            margin: 0,
+          }}
+        >
+          This text was marked as AI-likely because it uses very even sentence
+          structure, repeated formal wording, and low variation in writing
+          style. The word choices appear unusually consistent, and sentence
+          lengths show minimal natural variation — patterns that are rarely seen
+          in genuine human writing.This text was marked as AI-likely because it
+          uses very even sentence structure, repeated formal wording, and low
+          variation in writing style. The word choices appear unusually
+          consistent, and sentence lengths show minimal natural variation —
+          patterns that are rarely seen in genuine human writing.
+        </p>
+      </div>
+
+      {/* Detailed signal breakdown */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {FLAGGED_REASONS.map((f, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.07 }}
+            transition={{ delay: i * 0.06 }}
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: 12,
               background: "var(--bg-surface)",
-              borderRadius: 12,
+              borderRadius: 10,
               padding: "12px 14px",
               border: "1px solid var(--border)",
             }}
           >
-            {/* Accent dot */}
-            <div
-              style={{
-                width: 4,
-                height: 4,
-                borderRadius: "50%",
-                background: f.accent,
-                marginTop: 6,
-                flexShrink: 0,
-              }}
-            />
-            <f.icon
+            <f.Icon
               size={14}
-              color={f.accent}
+              color="var(--accent)"
               style={{ flexShrink: 0, marginTop: 1 }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -747,7 +928,7 @@ function AuditPanel() {
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: f.score > 85 ? "var(--error)" : "var(--warning)",
+                color: "var(--accent)",
                 flexShrink: 0,
               }}
             >
@@ -756,165 +937,143 @@ function AuditPanel() {
           </motion.div>
         ))}
       </div>
+    </div>
+  );
+}
 
-      {/* AOPC Gauge */}
+/* ── Explanation Reliability ────────────────────────────────────────────── */
+function ExplanationReliability() {
+  return (
+    <div className="glass" style={{ padding: 24 }}>
       <div
         style={{
-          background: "var(--bg-surface)",
-          borderRadius: 14,
-          padding: 20,
-          border: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 16,
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-heading)",
-              }}
-            >
-              AOPC Score
-            </div>
-            <div
-              style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}
-            >
-              Area Over Perturbation Curve — Faithfulness Metric
-            </div>
-          </div>
-          <span className="badge badge-emerald">High Faithfulness</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          {/* Circular gauge */}
+        <div>
           <div
             style={{
-              position: "relative",
-              width: 88,
-              height: 88,
-              flexShrink: 0,
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-heading)",
             }}
           >
-            <svg
-              viewBox="0 0 100 100"
-              style={{ width: 88, height: 88, transform: "rotate(-90deg)" }}
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="38"
-                fill="none"
-                stroke="var(--border)"
-                strokeWidth="12"
-              />
-              <motion.circle
-                cx="50"
-                cy="50"
-                r="38"
-                fill="none"
-                stroke="url(#aopc-g)"
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray="238.8"
-                initial={{ strokeDashoffset: 238.8 }}
-                animate={{ strokeDashoffset: 238.8 * (1 - 0.847) }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-              <defs>
-                <linearGradient id="aopc-g" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#8C52FF" />
-                  <stop offset="100%" stopColor="#C084FC" />
-                </linearGradient>
-              </defs>
-            </svg>
+            Explanation Reliability
+          </div>
+          <div
+            style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}
+          >
+            How trustworthy this result is — higher is better
+          </div>
+        </div>
+        <span className="badge badge-violet">High Reliability</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+        <div
+          style={{ position: "relative", width: 80, height: 80, flexShrink: 0 }}
+        >
+          <svg
+            viewBox="0 0 100 100"
+            style={{ width: 80, height: 80, transform: "rotate(-90deg)" }}
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r="38"
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth="12"
+            />
+            <motion.circle
+              cx="50"
+              cy="50"
+              r="38"
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray="238.8"
+              initial={{ strokeDashoffset: 238.8 }}
+              animate={{ strokeDashoffset: 238.8 * (1 - 0.847) }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+            />
+          </svg>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <div
+              className="mono"
               style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
+                fontSize: 16,
+                fontWeight: 900,
+                color: "var(--accent)",
+                lineHeight: 1,
               }}
             >
-              <div
-                className="mono"
-                style={{
-                  fontSize: 18,
-                  fontWeight: 900,
-                  color: "var(--accent)",
-                  lineHeight: 1,
-                }}
-              >
-                84.7
-              </div>
-              <div
-                style={{
-                  fontSize: 8,
-                  color: "var(--text-muted)",
-                  marginTop: 2,
-                }}
-              >
-                AOPC
-              </div>
+              84.7
+            </div>
+            <div
+              style={{ fontSize: 8, color: "var(--text-muted)", marginTop: 2 }}
+            >
+              score
             </div>
           </div>
-          {/* Stats */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {[
-              ["Faithfulness", "High"],
-              ["Perturbation Steps", "20"],
-              ["Random Baseline", "50.0"],
-              ["Sufficiency Metric", "0.912"],
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", gap: 10, fontSize: 12 }}>
-                <span style={{ color: "var(--text-muted)", minWidth: 130 }}>
-                  {k}
-                </span>
-                <span
-                  className="mono"
-                  style={{
-                    color:
-                      v === "High" ? "var(--success)" : "var(--text-primary)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {v}
-                </span>
-              </div>
-            ))}
-          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          {[
+            ["Reliability", "High"],
+            ["Verification steps", "20"],
+            ["Baseline score", "50.0"],
+            ["Confidence metric", "0.912"],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: "flex", gap: 10, fontSize: 12 }}>
+              <span style={{ color: "var(--text-muted)", minWidth: 140 }}>
+                {k}
+              </span>
+              <span
+                className="mono"
+                style={{ color: "var(--text-primary)", fontWeight: 600 }}
+              >
+                {v}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Main Export ──────────────────────────────────────────────────────────────
+/* ── Main Export ────────────────────────────────────────────────────────── */
+type AnalysisState = "idle" | "running" | "done";
+
 export function TextForensicsDashboard() {
   const [inputText, setInputText] = useState(SAMPLE_TEXT);
+  const [analysis, setAnalysis] = useState<AnalysisState>("idle");
 
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) setInputText(text);
     } catch {
-      /* clipboard permission denied — focus textarea for manual paste */
       document.getElementById("text-input-area")?.focus();
     }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Page Header */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Header */}
       <motion.div
         {...fadeUp()}
         style={{
@@ -925,13 +1084,12 @@ export function TextForensicsDashboard() {
         }}
       >
         <div>
-          {/* Section label */}
-           <div className="section-label" style={{ marginBottom: 6 }}>
-            Text Detection Module
-           </div>
+          <div className="section-label" style={{ marginBottom: 6 }}>
+            Text Detection
+          </div>
           <h1
             style={{
-              fontSize: 30,
+              fontSize: 28,
               fontWeight: 800,
               color: "var(--text-primary)",
               letterSpacing: "-0.02em",
@@ -939,7 +1097,8 @@ export function TextForensicsDashboard() {
               fontFamily: "var(--font-heading)",
             }}
           >
-            Analysis <span className="gradient-text-violet">Engine</span>
+            Detect AI-Written{" "}
+            <span style={{ color: "var(--accent)" }}>Content</span>
           </h1>
           <p
             style={{
@@ -948,38 +1107,94 @@ export function TextForensicsDashboard() {
               marginTop: 6,
             }}
           >
-             DeBERTa-v3 + LlamaIndex ReAct — Explainable AI Detection
+            Paste any text below and click Analyze Text to check if it was
+            AI-generated.
           </p>
         </div>
+        {analysis === "done" && (
+          <button
+            onClick={() => setAnalysis("idle")}
+            className="btn-ghost"
+            style={{ flexShrink: 0 }}
+          >
+            <RotateCcw size={13} /> New Analysis
+          </button>
+        )}
       </motion.div>
 
-      {/* Quillbot-style Text Input Area */}
-      <motion.div {...fadeUp(0.05)}>
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          {/* Toolbar */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "12px 16px", borderBottom: "1px solid var(--border)",
-            background: "var(--bg-surface)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {/* Text Input */}
+      <motion.div {...fadeUp(0.04)}>
+        <div
+          className="card"
+          style={{
+            padding: 0,
+            overflow: "hidden",
+            opacity: analysis !== "idle" ? 0.65 : 1,
+            transition: "opacity 0.2s",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 14px",
+              borderBottom: "1px solid var(--border)",
+              background: "var(--bg-surface)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <FileText size={13} color="var(--accent)" />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}>
-                Input Text
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-heading)",
+                }}
+              >
+                Your Text
               </span>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-body)" }}>
-                — paste or type content to analyze
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                — paste or type content to check
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
                 {inputText.length} chars
               </span>
               <button
                 onClick={() => setInputText("")}
-                style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer", fontFamily: "var(--font-body)", transition: "all 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
+                disabled={analysis !== "idle"}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                  transition: "all 0.12s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "var(--accent)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "var(--accent)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "var(--border)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "var(--text-secondary)";
+                }}
               >
                 Clear
               </button>
@@ -987,54 +1202,194 @@ export function TextForensicsDashboard() {
                 id="text-paste-btn"
                 onClick={handlePaste}
                 className="btn-primary"
-                style={{ fontSize: 12, padding: "6px 16px", borderRadius: 8 }}
+                disabled={analysis !== "idle"}
+                style={{ fontSize: 12, padding: "5px 14px", borderRadius: 7 }}
               >
                 Paste
               </button>
             </div>
           </div>
-
-          {/* Textarea */}
           <textarea
             id="text-input-area"
             value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            placeholder="Paste or type your text here to detect if it is AI-generated..."
+            onChange={(e) => setInputText(e.target.value)}
+            disabled={analysis !== "idle"}
+            placeholder="Paste or type text here to check if it was AI-generated..."
             spellCheck={false}
             style={{
-              width: "100%", minHeight: 140, padding: "16px",
-              fontSize: 13, color: "var(--text-primary)", lineHeight: 1.8,
-              background: "#fff", border: "none", outline: "none", resize: "vertical",
-              fontFamily: "var(--font-body)", boxSizing: "border-box",
+              width: "100%",
+              minHeight: 130,
+              padding: "14px 16px",
+              fontSize: 13,
+              color: "var(--text-primary)",
+              lineHeight: 1.75,
+              background: "#fff",
+              border: "none",
+              outline: "none",
+              resize: "vertical",
+              fontFamily: "var(--font-body)",
+              boxSizing: "border-box",
               display: "block",
             }}
           />
         </div>
       </motion.div>
 
-      {/* 2-column grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <motion.div {...fadeUp(0.1)} style={{ display: "flex" }}>
-          <div style={{ flex: 1 }}>
-            <SanitizationPanel />
-          </div>
-        </motion.div>
-        <motion.div {...fadeUp(0.15)} style={{ display: "flex" }}>
-          <div style={{ flex: 1 }}>
-            <ClassificationPanel />
-          </div>
-        </motion.div>
-      </div>
+      {/* Analyze Text Button */}
+      <AnimatePresence>
+        {analysis === "idle" && (
+          <motion.div
+            {...fadeUp(0.06)}
+            exit={{ opacity: 0, y: -6 }}
+            style={{ display: "flex", justifyContent: "center" }}
+          >
+            <button
+              id="analyze-text-btn"
+              className="btn-primary"
+              onClick={() => setAnalysis("running")}
+              disabled={!inputText.trim()}
+              style={{
+                padding: "12px 36px",
+                fontSize: 15,
+                borderRadius: 10,
+                gap: 10,
+              }}
+            >
+              <Play size={16} fill="currentColor" /> Analyze Text
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Full-width heatmap */}
-      <motion.div {...fadeUp(0.2)}>
-        <TokenHeatmap />
-      </motion.div>
+      {/* Loading */}
+      <AnimatePresence>
+        {analysis === "running" && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <AnalysisLoadingPanel onDone={() => setAnalysis("done")} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Full-width audit */}
-      <motion.div {...fadeUp(0.25)}>
-        <AuditPanel />
-      </motion.div>
+      {/* Results */}
+      <AnimatePresence>
+        {analysis === "done" && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          >
+            {/* Verdict banner */}
+            <div
+              style={{
+                background: "var(--accent-light)",
+                border: "1px solid var(--border-accent)",
+                borderLeft: "3px solid var(--accent)",
+                borderRadius: 12,
+                padding: "18px 22px",
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+              }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "var(--bg-page)",
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={18} color="var(--accent)" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: "var(--text-primary)",
+                    letterSpacing: "-0.02em",
+                    fontFamily: "var(--font-heading)",
+                  }}
+                >
+                  AI Generated
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-secondary)",
+                    marginTop: 2,
+                  }}
+                >
+                  Confidence:{" "}
+                  <span
+                    className="mono"
+                    style={{ color: "var(--accent)", fontWeight: 700 }}
+                  >
+                    96.3%
+                  </span>
+                </div>
+              </div>
+              <span className="badge badge-violet">High Confidence</span>
+            </div>
+
+            {/* Branch cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+            >
+              <BranchCardsRow />
+            </motion.div>
+
+            {/* Combined Result + AI-Likely Text Preview */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <CombinedResultSection text={inputText} />
+            </motion.div>
+
+            {/* Important Text Highlights */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <ImportantTextHighlights />
+            </motion.div>
+
+            {/* Why This Text Was Marked as AI */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <WhyMarkedAsAI />
+            </motion.div>
+
+            {/* Explanation Reliability */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <ExplanationReliability />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

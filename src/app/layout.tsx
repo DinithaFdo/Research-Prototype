@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VeriGuard AI – AI Detection Platform",
-  description: "Enterprise-grade AI detection platform for text authenticity and synthetic voice analysis. Fast, explainable results powered by DeBERTa-v3, AASIST, WavLM, and deep learning.",
-  keywords: ["AI detection", "AI text detection", "deepfake voice detection", "synthetic voice analysis", "explainable AI"],
+  title: "VeriGuard AI – AI Content Detection",
+  description: "Detect AI-generated text and synthetic voice with clear, human-readable explanations. Fast, reliable, and built for real-world verification.",
+  keywords: ["AI detection", "AI text detection", "synthetic voice detection", "deepfake audio", "explainable AI"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
