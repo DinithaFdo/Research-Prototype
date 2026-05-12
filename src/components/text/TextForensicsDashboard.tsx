@@ -44,25 +44,25 @@ const ANALYSIS_STEPS = [
 const BRANCH_CARDS = [
   {
     n: "01",
-    label: "Writing Pattern Check",
+    label: "Meaning and Context Check",
     confidence: 94,
     status: "AI Patterns Found",
   },
   {
     n: "02",
-    label: "Sentence Structure Check",
+    label: "Writing Style Check",
     confidence: 89,
     status: "Uniform Structure",
   },
   {
     n: "03",
-    label: "Word Choice Check",
+    label: "Topic and Domain Check",
     confidence: 91,
     status: "Formal Vocabulary",
   },
   {
     n: "04",
-    label: "Readability Check",
+    label: "Consistency Check",
     confidence: 78,
     status: "Low Variation",
   },
