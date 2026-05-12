@@ -176,6 +176,33 @@ const FLAGGED_REASONS = [
   },
 ];
 
+/* ── Text Safety Check Data ─────────────────────────────────────────────── */
+type TextCleaningIssue = {
+  type: string;
+  label: string;
+  action: string;
+  count: number;
+};
+
+type TextCleaningSummary = {
+  originalLength: number;
+  cleanedLength: number;
+  totalIssuesFound: number;
+  issues: TextCleaningIssue[];
+};
+
+const CLEANING_SUMMARY: TextCleaningSummary = {
+  originalLength: 322,
+  cleanedLength: 293,
+  totalIssuesFound: 29,
+  issues: [
+    { type: "zero_width", label: "Hidden zero-width characters", action: "Removed invisible characters",  count: 14 },
+    { type: "homoglyph",  label: "Unicode lookalike letters",    action: "Converted to normal letters",   count:  5 },
+    { type: "spacing",    label: "Extra spacing tricks",         action: "Cleaned spacing",               count:  8 },
+    { type: "formatting", label: "Hidden formatting",            action: "Removed unsafe formatting",     count:  2 },
+  ],
+};
+
 function scoreToStyle(score: number): React.CSSProperties {
   return {
     background: `rgba(124,58,237,${(score * 0.18).toFixed(2)})`,
@@ -1055,6 +1082,191 @@ function ExplanationReliability() {
   );
 }
 
+/* ── Text Safety Check Panel ────────────────────────────────────────────── */
+function TextSafetyCheckPanel({ summary }: { summary: TextCleaningSummary }) {
+  const clean = summary.totalIssuesFound === 0;
+  return (
+    <div className="glass" style={{ padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-heading)",
+            }}
+          >
+            Text Safety Check
+          </div>
+          <div
+            style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}
+          >
+            We checked the text for hidden tricks that can affect detection
+            accuracy.
+          </div>
+        </div>
+        {clean ? (
+          <span className="badge badge-neutral">No Issues Found</span>
+        ) : (
+          <span className="badge badge-violet">
+            {summary.totalIssuesFound} issues fixed
+          </span>
+        )}
+      </div>
+
+      {clean ? (
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            borderRadius: 10,
+            padding: "14px 16px",
+            border: "1px solid var(--border)",
+            fontSize: 13,
+            color: "var(--text-secondary)",
+          }}
+        >
+          No hidden text issues were found. The text was already clean.
+        </div>
+      ) : (
+        <>
+          {/* Stats row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
+            {[
+              ["Original Length", `${summary.originalLength} chars`],
+              ["Cleaned Length",  `${summary.cleanedLength} chars`],
+              ["Issues Removed",  `${summary.totalIssuesFound} found`],
+            ].map(([k, v]) => (
+              <div
+                key={k}
+                style={{
+                  background: "var(--bg-surface)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  border: "1px solid var(--border)",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "var(--accent)",
+                    marginBottom: 3,
+                  }}
+                >
+                  {v}
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                  {k}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Issues table */}
+          <div
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              overflow: "hidden",
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "var(--bg-surface)" }}>
+                  {["Issue Found", "What We Did", "Count"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "9px 14px",
+                        textAlign: "left",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.05em",
+                        textTransform: "uppercase",
+                        fontFamily: "var(--font-heading)",
+                        borderBottom: "1px solid var(--border)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {summary.issues.map((issue, i) => (
+                  <motion.tr
+                    key={issue.type}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    style={{
+                      borderBottom:
+                        i < summary.issues.length - 1
+                          ? "1px solid var(--border)"
+                          : "none",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "11px 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {issue.label}
+                    </td>
+                    <td
+                      style={{
+                        padding: "11px 14px",
+                        fontSize: 12,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {issue.action}
+                    </td>
+                    <td style={{ padding: "11px 14px" }}>
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "var(--accent)",
+                        }}
+                      >
+                        {issue.count}
+                      </span>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Main Export ────────────────────────────────────────────────────────── */
 type AnalysisState = "idle" | "running" | "done";
 
@@ -1368,6 +1580,15 @@ export function TextForensicsDashboard() {
               transition={{ delay: 0.15 }}
             >
               <ImportantTextHighlights />
+            </motion.div>
+
+            {/* Text Safety Check */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.175 }}
+            >
+              <TextSafetyCheckPanel summary={CLEANING_SUMMARY} />
             </motion.div>
 
             {/* Why This Text Was Marked as AI */}
